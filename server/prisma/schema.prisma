@@ -1,0 +1,200 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  OWNER
+  MANAGER
+  SUPERVISOR
+  INVENTORY_MANAGER
+  MACHINE_OPERATOR
+  WORKER
+}
+
+enum WorkerStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum ShiftStatus {
+  PLANNED
+  ACTIVE
+  COMPLETED
+}
+
+enum ProductionStatus {
+  IN_PROGRESS
+  COMPLETED
+  DELAYED
+}
+
+enum MachineStatus {
+  ACTIVE
+  IDLE
+  MAINTENANCE
+  FAULT
+}
+
+enum MaintenanceStatus {
+  PENDING
+  IN_PROGRESS
+  RESOLVED
+}
+
+enum InventoryType {
+  RAW_MATERIAL
+  FINISHED_GOOD
+}
+
+enum NotificationType {
+  LOW_PRODUCTION
+  MISSED_TARGET
+  MACHINE_FAILURE
+  LOW_INVENTORY
+  HIGH_REJECTION_RATE
+  DOWNTIME
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      Role     @default(WORKER)
+  status    WorkerStatus @default(ACTIVE)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  productionUpdates Production[]
+  loggedDefects     Defect[]
+  loggedLogs        MaintenanceLog[] @relation("loggedBy")
+  resolvedLogs      MaintenanceLog[] @relation("resolvedBy")
+  shifts            Shift[]          @relation("ShiftSupervisor")
+}
+
+model Worker {
+  id          String       @id @default(uuid())
+  name        String
+  email       String?
+  phone       String?
+  skillLevel  String       // e.g. "Beginner", "Intermediate", "Expert"
+  status      WorkerStatus @default(ACTIVE)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  shiftAssignments ShiftWorker[]
+}
+
+model Shift {
+  id           String       @id @default(uuid())
+  name         String       // e.g. "Morning Shift", "Night Shift"
+  startTime    DateTime
+  endTime      DateTime
+  date         DateTime
+  supervisorId String
+  supervisor   User         @relation("ShiftSupervisor", fields: [supervisorId], references: [id])
+  status       ShiftStatus  @default(PLANNED)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  workers     ShiftWorker[]
+  productions Production[]
+}
+
+model ShiftWorker {
+  shiftId  String
+  workerId String
+  shift    Shift  @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+  worker   Worker @relation(fields: [workerId], references: [id], onDelete: Cascade)
+
+  @@id([shiftId, workerId])
+}
+
+model Production {
+  id             String           @id @default(uuid())
+  lineId         String           // e.g., "Line A", "Line B"
+  targetUnits    Int
+  producedUnits  Int
+  rejectedUnits  Int
+  pendingUnits   Int
+  status         ProductionStatus @default(IN_PROGRESS)
+  delayReason    String?
+  supervisorId   String
+  supervisor     User             @relation(fields: [supervisorId], references: [id])
+  shiftId        String
+  shift          Shift            @relation(fields: [shiftId], references: [id])
+  date           DateTime         @default(now())
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  defects Defect[]
+}
+
+model Machine {
+  id         String        @id @default(uuid())
+  name       String
+  code       String        @unique
+  type       String        // e.g., "Welding", "CNC", "Assembly", "Packaging"
+  status     MachineStatus @default(IDLE)
+  efficiency Float         @default(100.0) // 0-100%
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  maintenanceLogs MaintenanceLog[]
+}
+
+model MaintenanceLog {
+  id              String            @id @default(uuid())
+  machineId       String
+  machine         Machine           @relation(fields: [machineId], references: [id])
+  description     String
+  status          MaintenanceStatus @default(PENDING)
+  loggedById      String
+  loggedBy        User              @relation("loggedBy", fields: [loggedById], references: [id])
+  resolvedById    String?
+  resolvedBy      User?             @relation("resolvedBy", fields: [resolvedById], references: [id])
+  downtimeMinutes Int?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+}
+
+model Inventory {
+  id           String        @id @default(uuid())
+  name         String
+  sku          String        @unique
+  type         InventoryType
+  quantity     Float
+  unit         String        // e.g., "kg", "pieces", "meters"
+  minThreshold Float
+  supplierInfo String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model Defect {
+  id           String     @id @default(uuid())
+  productionId String
+  production   Production @relation(fields: [productionId], references: [id])
+  category     String     // e.g., "Cosmetic", "Structural", "Functional"
+  quantity     Int
+  description  String?
+  loggedById   String
+  loggedBy     User       @relation(fields: [loggedById], references: [id])
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  title     String
+  message   String
+  type      NotificationType
+  read      Boolean          @default(false)
+  userId    String?          // null means broadcasted to all managers/owners
+  createdAt DateTime         @default(now())
+}
