@@ -121,7 +121,6 @@ model Production {
   targetUnits    Int
   producedUnits  Int
   rejectedUnits  Int
-  pendingUnits   Int
   status         ProductionStatus @default(IN_PROGRESS)
   delayReason    String?
   supervisorId   String
@@ -133,6 +132,13 @@ model Production {
   updatedAt      DateTime         @updatedAt
 
   defects Defect[]
+}
+
+enum MachineStatus {
+  ACTIVE
+  IDLE
+  FAULTY
+  MAINTENANCE
 }
 
 model Machine {
