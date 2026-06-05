@@ -1,91 +1,142 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, Filter } from 'lucide-react';
+import { Search, SlidersHorizontal, Settings, Check } from 'lucide-react';
 
-const mockInventory = [
-  { name: 'T-800 Servo Motor', sku: 'MOT-800-22', category: 'Mechanical', stock: 42, unit: 'pcs', status: 'IN STOCK' },
-  { name: 'C-3PO Controller PCB', sku: 'PCB-PRO-01', category: 'Electronics', stock: 8, unit: 'pcs', status: 'LOW STOCK' },
-  { name: 'Grade A Steel Coils', sku: 'RAW-ST-500', category: 'Raw Materials', stock: 1250, unit: 'kg', status: 'IN STOCK' },
-  { name: 'Industrial Grade Lubricant', sku: 'LUB-V5-XL', category: 'Consumables', stock: 0, unit: 'Liters', status: 'OUT OF STOCK' },
-  { name: 'Hydraulic Valve Unit', sku: 'HYD-VL-99', category: 'Mechanical', stock: 15, unit: 'pcs', status: 'IN STOCK' },
-  { name: 'Fiber Optic Sensors', sku: 'SEN-F0-012', category: 'Sensors', stock: 3, unit: 'pcs', status: 'LOW STOCK' },
-  { name: 'Pneumatic Hoses 10m', sku: 'PNE-H0-10M', category: 'Consumables', stock: 85, unit: 'm', status: 'IN STOCK' },
-  { name: 'Tungsten Drill Bits', sku: 'TOL-DRI-6MM', category: 'Tools', stock: 12, unit: 'pcs', status: 'LOW STOCK' },
-];
+interface InventoryItem {
+  name: string;
+  sku: string;
+  category: string;
+  stock: number;
+  unit: string;
+  status: string;
+  minLimit: number;
+  maxLimit: number;
+}
 
-export function InventoryTable() {
+interface InventoryTableProps {
+  items: InventoryItem[];
+  onUpdateLimits: (sku: string, minLimit: number, maxLimit: number) => void;
+}
+
+export function InventoryTable({ items, onUpdateLimits }: InventoryTableProps) {
   const [search, setSearch] = useState('');
+  const [activeCategory, setActiveCategory] = useState('All');
+  
+  const [editingSku, setEditingSku] = useState<string | null>(null);
+  const [editMin, setEditMin] = useState<number>(0);
+  const [editMax, setEditMax] = useState<number>(0);
 
-  // Live filter feature: dynamically checks item names or SKUs as you type
-  const filteredItems = mockInventory.filter(item => 
-    item.name.toLowerCase().includes(search.toLowerCase()) || 
-    item.sku.toLowerCase().includes(search.toLowerCase())
-  );
+  const categories = ['All', ...new Set(items.map(item => item.category))];
+
+  const handleStartEdit = (item: InventoryItem) => {
+    setEditingSku(item.sku);
+    // Safe fallbacks: If the limit is missing or undefined, default directly to 0
+    setEditMin(item.minLimit ?? 0);
+    setEditMax(item.maxLimit ?? 0);
+  };
+
+  const handleSaveEdit = (sku: string) => {
+    onUpdateLimits(sku, editMin, editMax);
+    setEditingSku(null);
+  };
+
+  const filteredItems = items.filter(item => {
+    const matchesSearch = item.name.toLowerCase().includes(search.toLowerCase()) || 
+                          item.sku.toLowerCase().includes(search.toLowerCase());
+    const matchesCategory = activeCategory === 'All' || item.category === activeCategory;
+    return matchesSearch && matchesCategory;
+  });
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-      {/* Table Action Controls Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-center gap-3 pb-4">
-        <div className="relative w-full sm:w-72">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" />
+    <div className="rounded-xl border border-gray-200 bg-white/70 backdrop-blur-md shadow-[0_1px_2px_rgba(0,0,0,0.02)] p-5">
+      <div className="flex flex-col gap-4 pb-5 border-b border-gray-100 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative w-full sm:w-80">
+          <Search className="absolute left-3 top-3 h-3.5 w-3.5 text-gray-400" />
           <input
             type="text"
-            placeholder="Search inventory, SKUs..."
+            placeholder="Filter components, batches, SKUs..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 text-gray-900 placeholder-gray-400"
+            className="w-full pl-9 pr-4 py-2 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 text-gray-900 placeholder-gray-400 transition-all shadow-inner"
           />
         </div>
-        <div className="flex w-full sm:w-auto items-center gap-2 justify-end">
-          <button className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-600">
-            <Filter className="h-3.5 w-3.5" /> All Categories
-          </button>
-          <button className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-600">
-            All Statuses
-          </button>
+        
+        <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl w-full sm:w-auto overflow-x-auto">
+          <div className="pl-1.5 pr-1 text-gray-400 hidden md:block"><SlidersHorizontal className="h-3.5 w-3.5" /></div>
+          {categories.map(cat => (
+            <button
+              key={cat}
+              onClick={() => setActiveCategory(cat)}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 whitespace-nowrap ${
+                activeCategory === cat ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'
+              }`}
+            >
+              {cat}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Scrollable Table View Container */}
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm text-left">
-          <thead className="text-xs text-gray-500 uppercase bg-gray-50/70 border-y border-gray-200">
-            <tr>
-              <th className="px-4 py-3 font-semibold">Item Name</th>
-              <th className="px-4 py-3 font-semibold">SKU</th>
-              <th className="px-4 py-3 font-semibold">Category</th>
-              <th className="px-4 py-3 font-semibold text-right">Stock</th>
-              <th className="px-4 py-3 font-semibold text-center">Unit</th>
-              <th className="px-4 py-3 font-semibold text-center">Status</th>
+      <div className="overflow-x-auto mt-4">
+        <table className="w-full text-sm text-left border-collapse">
+          <thead>
+            <tr className="text-xs font-bold uppercase tracking-wider text-gray-400">
+              <th className="pb-3 px-2">Item Nomenclature</th>
+              <th className="pb-3 px-2">Serial SKU</th>
+              <th className="pb-3 px-2">Quantity</th>
+              <th className="pb-3 px-2 text-center">Custom Targets (Min / Max)</th>
+              <th className="pb-3 px-2 text-right">Status State</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {filteredItems.map((item, index) => (
-              <tr key={index} className="hover:bg-gray-50/50 transition-colors">
-                <td className="px-4 py-3.5 font-bold text-gray-900">{item.name}</td>
-                <td className="px-4 py-3.5 font-mono text-xs text-gray-400 tracking-tight">{item.sku}</td>
-                <td className="px-4 py-3.5 text-gray-500">{item.category}</td>
-                <td className="px-4 py-3.5 text-right font-bold text-gray-900">{item.stock.toLocaleString()}</td>
-                <td className="px-4 py-3.5 text-center text-gray-400 text-xs">{item.unit}</td>
-                <td className="px-4 py-3.5 text-center">
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                    item.status === 'IN STOCK' ? 'bg-emerald-500/10 text-emerald-600' :
-                    item.status === 'LOW STOCK' ? 'bg-amber-500/10 text-amber-600' :
-                    'bg-rose-500/10 text-rose-600'
+              <tr key={index} className="group hover:bg-gray-50/60 transition-colors duration-150">
+                <td className="py-3.5 px-2 font-semibold text-gray-900">{item.name}</td>
+                <td className="py-3.5 px-2 font-mono text-xs text-gray-400 font-medium tracking-tight">{item.sku}</td>
+                <td className="py-3.5 px-2 font-bold text-gray-900 tabular-nums">
+                  {item.stock.toLocaleString()} <span className="text-[10px] text-gray-400 font-medium">{item.unit}</span>
+                </td>
+                
+                {/* DYNAMIC THRESHOLD WITH UNIT CONTEXT BINDING */}
+                <td className="py-3.5 px-2 text-center">
+                  {editingSku === item.sku ? (
+                    <div className="inline-flex items-center gap-1 bg-white border border-blue-200 p-1.5 rounded-lg shadow-sm animate-fadeIn text-xs">
+                      <input type="number" value={editMin} title="Min Alert Trigger Limit" onChange={(e) => setEditMin(Number(e.target.value))} className="w-12 text-center border-none p-0 text-xs text-gray-900 font-bold focus:ring-0" />
+                      <span className="text-gray-300 font-bold">/</span>
+                      <input type="number" value={editMax} title="Max Restock Target Capacity" onChange={(e) => setEditMax(Number(e.target.value))} className="w-14 text-center border-none p-0 text-xs text-gray-900 font-bold focus:ring-0" />
+                      <span className="text-gray-400 font-bold text-[10px] px-1 bg-gray-50 rounded border">{item.unit}</span>
+                      <button onClick={() => handleSaveEdit(item.sku)} className="bg-blue-600 text-white p-1 rounded-md hover:bg-blue-700 ml-1"><Check className="h-3 w-3" /></button>
+                    </div>
+                  ) : (
+                    <div 
+                      onClick={() => handleStartEdit(item)}
+                      className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md border border-gray-100 bg-gray-50/50 text-[11px] font-semibold text-gray-500 cursor-pointer hover:border-blue-200 hover:bg-white transition-all group/btn"
+                    >
+                      <span>Min: <strong className="text-gray-800">{item.minLimit}</strong> <small className="text-gray-400 text-[9px]">{item.unit}</small></span>
+                      <span className="text-gray-300">|</span>
+                      <span>Max: <strong className="text-gray-800">{item.maxLimit}</strong> <small className="text-gray-400 text-[9px]">{item.unit}</small></span>
+                      <Settings className="h-3 w-3 text-gray-300 group-hover/btn:text-blue-500 transition-colors ml-0.5" />
+                    </div>
+                  )}
+                </td>
+
+                <td className="py-3.5 px-2 text-right">
+                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[10px] font-bold border ${
+                    item.status === 'IN STOCK' ? 'bg-emerald-50/50 text-emerald-600 border-emerald-100' :
+                    item.status === 'LOW STOCK' ? 'bg-amber-50/50 text-amber-600 border-amber-100' : 'bg-rose-50/50 text-rose-600 border-rose-100'
                   }`}>
+                    {item.status === 'OUT OF STOCK' && (
+                      <span className="flex h-1.5 w-1.5 relative">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-rose-500"></span>
+                      </span>
+                    )}
                     {item.status}
                   </span>
                 </td>
               </tr>
             ))}
-            {filteredItems.length === 0 && (
-              <tr>
-                <td colSpan={6} className="text-center py-8 text-sm text-gray-400">
-                  No factory parts match your search query.
-                </td>
-              </tr>
-            )}
           </tbody>
         </table>
       </div>

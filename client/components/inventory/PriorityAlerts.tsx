@@ -1,56 +1,75 @@
 'use client';
 
-import { BellRing, Sparkles } from 'lucide-react';
+import { BellRing, Sparkles, ArrowRight } from 'lucide-react';
 
-const criticalAlerts = [
-  { id: 1, name: 'Industrial Lubricant', stock: '0 Liters', status: 'OUT OF STOCK', color: 'bg-rose-100 text-rose-700 border-rose-200' },
-  { id: 2, name: 'Fiber Optic Sensors', stock: '3 pcs', status: 'LOW STOCK', color: 'bg-amber-100 text-amber-700 border-amber-200' },
-  { id: 3, name: 'C-3PO Controller PCB', stock: '8 pcs', status: 'LOW STOCK', color: 'bg-amber-100 text-amber-700 border-amber-200' },
-];
+interface InventoryItem {
+  name: string;
+  sku: string;
+  category: string;
+  stock: number;
+  unit: string;
+  status: string;
+}
 
-export function PriorityAlerts() {
+interface PriorityAlertsProps {
+  inventory: InventoryItem[];
+  onReorderTrigger: (sku: string) => void;
+}
+
+export function PriorityAlerts({ inventory, onReorderTrigger }: PriorityAlertsProps) {
+  // Dynamically filter items that are low or out of stock directly from the main list array
+  const activeAlerts = inventory.filter(item => item.status === 'LOW STOCK' || item.status === 'OUT OF STOCK');
+
   return (
     <div className="space-y-4">
-      {/* Real-time Urgency Panel */}
-      <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-        <div className="flex items-center justify-between pb-4 border-b border-gray-100">
-          <div className="flex items-center gap-2 font-bold text-gray-900">
+      <div className="rounded-xl border border-gray-200 bg-white/70 backdrop-blur-md p-5 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+        <div className="flex items-center justify-between pb-3.5 border-b border-gray-100">
+          <div className="flex items-center gap-2 font-bold text-gray-900 text-sm">
             <BellRing className="h-4 w-4 text-rose-500" />
-            <span>Priority Alerts</span>
+            <span>Priority Queue</span>
           </div>
-          <span className="bg-rose-500 text-white text-xs px-2 py-0.5 rounded-full font-bold">3</span>
+          <span className="bg-rose-500 text-white text-[10px] px-1.5 py-0.5 rounded-md font-bold tracking-wide">
+            {activeAlerts.length} ALARMS active
+          </span>
         </div>
         
-        <div className="mt-4 space-y-3">
-          {criticalAlerts.map((alert) => (
-            <div key={alert.id} className="p-3 rounded-lg border border-gray-100 bg-gray-50/50 space-y-2">
+        <div className="mt-4 space-y-2.5">
+          {activeAlerts.map((item, idx) => (
+            <div key={idx} className="group p-3 rounded-lg border border-gray-100 bg-gray-50/30 space-y-2 hover:border-gray-300 hover:bg-white transition-all duration-200">
               <div className="flex justify-between items-start">
-                <span className="text-sm font-semibold text-gray-900">{alert.name}</span>
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${alert.color}`}>
-                  {alert.stock}
+                <span className="text-xs font-bold text-gray-900">{item.name}</span>
+                <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded border tracking-wider uppercase ${
+                  item.status === 'OUT OF STOCK' ? 'bg-rose-50 text-rose-700 border-rose-100' : 'bg-amber-50 text-amber-700 border-amber-100'
+                }`}>
+                  {item.stock} {item.unit}
                 </span>
               </div>
-              <div className="flex justify-between items-center text-xs text-gray-400">
-                <span>Required for Belt B Line</span>
-                <button className="text-xs text-blue-600 font-semibold hover:underline">Quick Reorder</button>
+              <div className="flex justify-between items-center text-[11px] text-gray-400 font-medium">
+                <span>Domain: {item.category}</span>
+                <button 
+                  onClick={() => onReorderTrigger(item.sku)}
+                  className="inline-flex items-center gap-0.5 text-blue-600 font-bold hover:text-blue-700"
+                >
+                  Reorder <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
+                </button>
               </div>
             </div>
           ))}
+          {activeAlerts.length === 0 && (
+            <p className="text-center py-6 text-xs text-gray-400 font-medium">✅ Warehouse stock bounds optimal.</p>
+          )}
         </div>
       </div>
 
-      {/* Modern AI Analytics Recommendation Insight Block */}
-      <div className="rounded-xl border border-blue-100 bg-gradient-to-br from-blue-50/50 to-transparent p-5 shadow-sm">
-        <div className="flex items-center gap-2 font-bold text-blue-600 mb-2">
+      <div className="rounded-xl border border-blue-100 bg-gradient-to-b from-blue-50/40 to-transparent p-5 shadow-sm relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-2xl pointer-events-none" />
+        <div className="flex items-center gap-2 font-bold text-blue-600 mb-2.5">
           <Sparkles className="h-4 w-4" />
-          <span className="text-sm">AI Forecasting Insight</span>
+          <span className="text-xs uppercase tracking-wider">AI Procurement Vector</span>
         </div>
-        <p className="text-xs text-gray-600 leading-relaxed">
-          Based on the manufacturing schedule for next week, stock of <strong className="text-gray-900">Grade A Steel Coils</strong> will breach safety thresholds in 4 days.
+        <p className="text-xs text-gray-600 leading-relaxed font-medium">
+          Automated limits calculations evaluate material deployment velocities to maximize capital resource liquidity configurations.
         </p>
-        <div className="mt-3 p-2.5 rounded bg-white border border-gray-100 text-xs text-gray-700 font-semibold shadow-sm">
-          💡 Recommendation: Increase current order volume by 15%.
-        </div>
       </div>
     </div>
   );
