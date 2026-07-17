@@ -1,0 +1,6 @@
+{
+  "name": "IndustrialOS Belt Manager",
+  "description": "High-density dashboard for IndustrialOS Floor Shift belt managers with live telemetry, tactile quick-logs, predictive diagnostics, checklist validations, and an AI manual Copilot.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
